@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>HTMLプレビューアプリ</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      font-family: 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #fdfdfd;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+    textarea {
+      width: 100%;
+      height: 200px;
+      font-family: monospace;
+      font-size: 14px;
+      padding: 10px;
+      box-sizing: border-box;
+      resize: vertical;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+    }
+    select {
+      width: 100%;
+      margin-top: 12px;
+      padding: 10px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      background: #fff;
+    }
+
+    section {
+      margin-top: 24px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    h2 {
+      font-size: 16px;
+      margin: 0;
+      color: #444;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      padding: 10px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background: #4a90e2;
+      color: white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: background 0.2s ease, transform 0.1s ease;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #357ab8;
+      transform: scale(1.03);
+    }
+
+    /* ダウンロード・出力系ボタンの色 */
+    .download-btn {
+      background: #2ecc71;
+    }
+    .download-btn:hover {
+      background: #27ae60;
+    }
+
+    /* リスト内のアクションボタンのスタイル */
+    .list-action-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 4px;
+      margin-left: 4px;
+    }
+    .rename-btn {
+      background: #f39c12;
+    }
+    .rename-btn:hover {
+      background: #d68910;
+    }
+    .delete-btn {
+      background: #e74c3c;
+    }
+    .delete-btn:hover {
+      background: #c0392b;
+    }
+
+    .text-btn {
+      background: none;
+      color: #e74c3c;
+      box-shadow: none;
+      padding: 4px 8px;
+      font-size: 13px;
+    }
+    .text-btn:hover {
+      background: #fce8e6;
+      transform: none;
+    }
+
+    /* ファイル管理用のスタイル */
+    .file-input-group {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+    .file-input-group input[type="file"] {
+      flex: 1;
+      font-size: 14px;
+      min-width: 200px;
+    }
+    .file-input-group input[type="text"] {
+      flex: 1;
+      padding: 8px;
+      font-size: 14px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      min-width: 150px;
+    }
+    #file-list {
+      list-style: none;
+      padding: 0;
+      margin-top: 12px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #fff;
+    }
+    #file-list li {
+      padding: 8px 12px;
+      border-bottom: 1px solid #eee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+    #file-list li:last-child {
+      border-bottom: none;
+    }
+    .file-actions {
+      display: flex;
+      gap: 6px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 300px;
+      border: 1px solid #ccc;
+      margin-top: 16px;
+      background: white;
+      border-radius: 8px;
+    }
+
+    #fullscreen-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: white;
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+    }
+
+    #fullscreen-iframe {
+      flex: 1;
+      border: none;
+    }
+
+    #exit-fullscreen {
+      background: #333;
+      color: white;
+      padding: 10px;
+      text-align: right;
+      font-size: 14px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>HTMLプレビューアプリ</h1>
+
+  <textarea id="html-input" placeholder="ここにHTMLコードを入力してください"></textarea>
+
+  <select id="slot-select">
+    <option value="slot1">スロット1</option>
+    <option value="slot2">スロット2</option>
+    <option value="slot3">スロット3</option>
+    <option value="slot4">スロット4</option>
+    <option value="slot5">スロット5</option>
+  </select>
+
+  <section>
+    <div class="section-header">
+      <h2>📁 保存・読み込み・出力</h2>
+    </div>
+    <div class="button-grid">
+      <button onclick="saveCode()">💾 保存</button>
+      <button onclick="loadCode()">📂 読み込み</button>
+      <button onclick="downloadHtmlFile()" class="download-btn">📥 HTML出力 (DL)</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <h2>🖼️ ファイル管理（画像など）</h2>
+      <button onclick="clearAllLocalFiles()" class="text-btn">🧹 全削除</button>
+    </div>
+    <div class="file-input-group">
+      <input type="file" id="file-input">
+      <input type="text" id="file-name" placeholder="ファイル名 (例: image001)">
+      <button onclick="saveLocalFile()">📥 保存</button>
+    </div>
+    <ul id="file-list">
+      </ul>
+    <p style="font-size: 12px; color: #666; margin-top: 8px;">
+      ※ 保存したファイル名を使って、HTML内で <code>&lt;img src="image001"&gt;</code> のように呼び出せます。
+    </p>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <h2>🖥️ 表示操作</h2>
+    </div>
+    <div class="button-grid">
+      <button onclick="renderPreview()">▶️ プレビュー</button>
+      <button onclick="enterFullscreen()">🔳 フルスクリーン</button>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-header">
+      <h2>🛠️ 補助機能</h2>
+    </div>
+    <div class="button-grid">
+      <button onclick="copyCode()">📋 コピー</button>
+      <button onclick="clearCode()">🧹 クリア</button>
+      <button onclick="pasteCode()">📥 ペースト</button>
+    </div>
+  </section>
+
+  <iframe id="preview-frame"></iframe>
+
+  <div id="fullscreen-overlay">
+    <div id="exit-fullscreen" onclick="exitFullscreen()">⏎ フルスクリーン解除</div>
+    <iframe id="fullscreen-iframe"></iframe>
+  </div>
+
+  <script>
+    let activePreviewUrls = [];
+
+    function clearPreviewUrls() {
+      activePreviewUrls.forEach(url => URL.revokeObjectURL(url));
+      activePreviewUrls = [];
+    }
+
+    const dbName = 'HtmlPreviewDB';
+    const storeName = 'files';
+    let db;
+
+    const initDB = new Promise((resolve, reject) => {
+      const request = indexedDB.open(dbName, 1);
+      request.onupgradeneeded = (e) => {
+        const database = e.target.result;
+        if (!database.objectStoreNames.contains(storeName)) {
+          database.createObjectStore(storeName, { keyPath: 'name' });
+        }
+      };
+      request.onsuccess = (e) => {
+        db = e.target.result;
+        resolve(db);
+      };
+      request.onerror = (e) => reject(e.target.error);
+    });
+
+    window.addEventListener('load', async () => {
+      await updateNextFileName();
+    });
+
+    async function updateNextFileName() {
+      await initDB;
+      const transaction = db.transaction(storeName, 'readonly');
+      const store = transaction.objectStore(storeName);
+      const request = store.getAll();
+
+      request.onsuccess = () => {
+        const files = request.result;
+        let maxNum = 0;
+        
+        const list = document.getElementById('file-list');
+        list.innerHTML = '';
+
+        files.forEach(f => {
+          const match = f.name.match(/^image(\d{3})$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNum) maxNum = num;
+          }
+
+          const li = document.createElement('li');
+          const nameSpan = document.createElement('span');
+          nameSpan.textContent = `${f.name} (${Math.round(f.blob.size / 1024)} KB)`;
+          
+          const actionsDiv = document.createElement('div');
+          actionsDiv.className = 'file-actions';
+
+          // 名前変更ボタン
+          const renameBtn = document.createElement('button');
+          renameBtn.textContent = '✏️ 変更';
+          renameBtn.className = 'list-action-btn rename-btn';
+          renameBtn.onclick = () => renameLocalFile(f.name);
+
+          // 削除ボタン
+          const delBtn = document.createElement('button');
+          delBtn.textContent = '🗑️ 削除';
+          delBtn.className = 'list-action-btn delete-btn';
+          delBtn.onclick = () => deleteLocalFile(f.name);
+          
+          actionsDiv.appendChild(renameBtn);
+          actionsDiv.appendChild(delBtn);
+
+          li.appendChild(nameSpan);
+          li.appendChild(actionsDiv);
+          list.appendChild(li);
+        });
+
+        const nextNum = String(maxNum + 1).padStart(3, '0');
+        document.getElementById('file-name').value = `image${nextNum}`;
+      };
+    }
+
+    async function saveLocalFile() {
+      const fileInput = document.getElementById('file-input');
+      const nameInput = document.getElementById('file-name');
+      const file = fileInput.files[0];
+      const name = nameInput.value.trim();
+
+      if (!file) return alert('ファイルを選択してください');
+      if (!name) return alert('ファイル名を入力してください');
+
+      await initDB;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      
+      const record = { name: name, blob: file, type: file.type };
+      const request = store.put(record);
+
+      request.onsuccess = () => {
+        fileInput.value = '';
+        updateNextFileName();
+      };
+      request.onerror = () => alert('保存に失敗しました');
+    }
+
+    // --- ファイルの名前変更機能 ---
+    async function renameLocalFile(oldName) {
+      const newNameInput = prompt(`「${oldName}」の新しいファイル名を入力してください:`, oldName);
+      if (newNameInput === null) return; // キャンセル時
+      
+      const newName = newNameInput.trim();
+      if (!newName || newName === oldName) return;
+
+      await initDB;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+
+      // 新しい名前が既に存在しないかチェック
+      const checkReq = store.get(newName);
+      checkReq.onsuccess = () => {
+        if (checkReq.result) {
+          alert(`エラー: ファイル名「${newName}」はすでに存在します。`);
+          return;
+        }
+
+        // 既存のデータを取得して名前を変えて再保存し、古いものを消す
+        const getReq = store.get(oldName);
+        getReq.onsuccess = () => {
+          const record = getReq.result;
+          if (!record) return;
+
+          const newRecord = { name: newName, blob: record.blob, type: record.type };
+          store.put(newRecord).onsuccess = () => {
+            store.delete(oldName).onsuccess = () => {
+              updateNextFileName();
+            };
+          };
+        };
+      };
+    }
+
+    async function deleteLocalFile(name) {
+      if (!confirm(`ファイル「${name}」を削除しますか？`)) return;
+      await initDB;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      store.delete(name).onsuccess = () => {
+        updateNextFileName();
+      };
+    }
+
+    async function clearAllLocalFiles() {
+      if (!confirm('保存されているすべてのファイルを削除しますか？\nこの操作は取り消せません。')) return;
+      await initDB;
+      const transaction = db.transaction(storeName, 'readwrite');
+      const store = transaction.objectStore(storeName);
+      store.clear().onsuccess = () => {
+        updateNextFileName();
+      };
+    }
+
+    function downloadHtmlFile() {
+      const htmlCode = document.getElementById('html-input').value;
+      if (!htmlCode.trim()) {
+        return alert('ダウンロードするHTMLコードが入力されていません');
+      }
+
+      const blob = new Blob([htmlCode], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    async function prepareHtmlForPreview(rawHtml) {
+      await initDB;
+      return new Promise((resolve) => {
+        const transaction = db.transaction(storeName, 'readonly');
+        const store = transaction.objectStore(storeName);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          const files = request.result;
+          let processedHtml = rawHtml;
+          
+          files.forEach(f => {
+            const blobUrl = URL.createObjectURL(f.blob);
+            activePreviewUrls.push(blobUrl);
+            
+            const safeName = f.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const regex = new RegExp(`(["'])${safeName}(["'])`, 'g');
+            processedHtml = processedHtml.replace(regex, `$1${blobUrl}$2`);
+          });
+          resolve(processedHtml);
+        };
+      });
+    }
+
+    function saveCode() {
+      const slot = document.getElementById('slot-select').value;
+      const html = document.getElementById('html-input').value;
+      localStorage.setItem(`html_${slot}`, html);
+      alert(`コードを${slot}に保存しました`);
+    }
+
+    function loadCode() {
+      const slot = document.getElementById('slot-select').value;
+      const html = localStorage.getItem(`html_${slot}`);
+      if (html !== null) {
+        document.getElementById('html-input').value = html;
+        alert(`${slot}からコードを読み込みました`);
+      } else {
+        alert(`${slot}には保存されたコードがありません`);
+      }
+    }
+
+    async function renderPreview() {
+      const rawHtml = document.getElementById('html-input').value;
+      
+      clearPreviewUrls(); 
+      const processedHtml = await prepareHtmlForPreview(rawHtml);
+
+      const previewFrame = document.getElementById('preview-frame');
+      const newFrame = document.createElement('iframe');
+      newFrame.id = 'preview-frame';
+      newFrame.style.width = '100%';
+      newFrame.style.height = '300px';
+      newFrame.style.border = '1px solid #ccc';
+      newFrame.style.borderRadius = '8px';
+
+      previewFrame.parentNode.replaceChild(newFrame, previewFrame);
+
+      const blob = new Blob([processedHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      activePreviewUrls.push(url);
+      newFrame.src = url;
+    }
+
+    async function enterFullscreen() {
+      const rawHtml = document.getElementById('html-input').value;
+      
+      clearPreviewUrls();
+      const processedHtml = await prepareHtmlForPreview(rawHtml);
+
+      const fullscreenIframe = document.getElementById('fullscreen-iframe');
+      const overlay = document.getElementById('fullscreen-overlay');
+
+      const newFrame = document.createElement('iframe');
+      newFrame.id = 'fullscreen-iframe';
+      newFrame.style.flex = '1';
+      newFrame.style.border = 'none';
+
+      fullscreenIframe.parentNode.replaceChild(newFrame, fullscreenIframe);
+
+      const blob = new Blob([processedHtml], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      activePreviewUrls.push(url);
+      newFrame.src = url;
+
+      overlay.style.display = 'flex';
+    }
+
+    function exitFullscreen() {
+      document.getElementById('fullscreen-overlay').style.display = 'none';
+    }
+
+    function copyCode() {
+      const textarea = document.getElementById('html-input');
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        alert('コードをコピーしました！');
+      } catch (err) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(textarea.value).then(() => {
+            alert('コードをコピーしました！');
+          }).catch(e => {
+            alert('コピーに失敗しました: ' + e);
+          });
+        } else {
+          alert('コピーに失敗しました');
+        }
+      }
+      try { window.getSelection().removeAllRanges(); } catch(e){}
+    }
+
+    function clearCode() {
+      const textarea = document.getElementById('html-input');
+      if (confirm('入力内容をすべて消去しますか？')) {
+        textarea.value = '';
+      }
+    }
+
+    async function pasteCode() {
+      const textarea = document.getElementById('html-input');
+      textarea.value = '';
+      if (navigator.clipboard && navigator.clipboard.readText) {
+        try {
+          const text = await navigator.clipboard.readText();
+          textarea.value = text;
+          alert('クリップボードの内容を貼り付けました！');
+        } catch (err) {
+          alert('クリップボードの読み取りに失敗しました。\nエラー: ' + err);
+        }
+      } else {
+        alert('このブラウザではクリップボード読み取りがサポートされていません。');
+      }
+    }
+  </script>
+
+</body>
+</html>
