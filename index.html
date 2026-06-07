@@ -328,13 +328,11 @@
           const actionsDiv = document.createElement('div');
           actionsDiv.className = 'file-actions';
 
-          // 名前変更ボタン
           const renameBtn = document.createElement('button');
           renameBtn.textContent = '✏️ 変更';
           renameBtn.className = 'list-action-btn rename-btn';
           renameBtn.onclick = () => renameLocalFile(f.name);
 
-          // 削除ボタン
           const delBtn = document.createElement('button');
           delBtn.textContent = '🗑️ 削除';
           delBtn.className = 'list-action-btn delete-btn';
@@ -376,10 +374,9 @@
       request.onerror = () => alert('保存に失敗しました');
     }
 
-    // --- ファイルの名前変更機能 ---
     async function renameLocalFile(oldName) {
       const newNameInput = prompt(`「${oldName}」の新しいファイル名を入力してください:`, oldName);
-      if (newNameInput === null) return; // キャンセル時
+      if (newNameInput === null) return;
       
       const newName = newNameInput.trim();
       if (!newName || newName === oldName) return;
@@ -388,7 +385,6 @@
       const transaction = db.transaction(storeName, 'readwrite');
       const store = transaction.objectStore(storeName);
 
-      // 新しい名前が既に存在しないかチェック
       const checkReq = store.get(newName);
       checkReq.onsuccess = () => {
         if (checkReq.result) {
@@ -396,7 +392,6 @@
           return;
         }
 
-        // 既存のデータを取得して名前を変えて再保存し、古いものを消す
         const getReq = store.get(oldName);
         getReq.onsuccess = () => {
           const record = getReq.result;
@@ -432,10 +427,24 @@
       };
     }
 
+    // --- 変更箇所: ファイル名を指定してダウンロード ---
     function downloadHtmlFile() {
       const htmlCode = document.getElementById('html-input').value;
       if (!htmlCode.trim()) {
         return alert('ダウンロードするHTMLコードが入力されていません');
+      }
+
+      // ファイル名をユーザーに入力させる
+      let fileName = prompt('保存するファイル名を入力してください:', 'index.html');
+      
+      // キャンセルされた場合は処理を中断
+      if (fileName === null) {
+        return; 
+      }
+      
+      // 空白だった場合はデフォルト名を設定
+      if (fileName.trim() === '') {
+        fileName = 'index.html';
       }
 
       const blob = new Blob([htmlCode], { type: 'text/html;charset=utf-8;' });
@@ -443,7 +452,7 @@
       
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'index.html';
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       
